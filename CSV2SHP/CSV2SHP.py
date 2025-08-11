@@ -249,6 +249,16 @@ class InputDialog(QWidget):
                         797  #
                         }
         
+        self.TERMINAL_CODES = {
+                        701, # - TERMINAL POINT CODES
+                        784, #
+                        360, #
+                        787, #
+                        321, #
+                        798, #
+                        797  #
+                        }
+        
         self.ptema_list = [list[0] for list in self.ptema]
         self.P_Tema_kode.addItems(self.ptema_list)
         self.P_Tema_kode.setCurrentIndex(
@@ -738,9 +748,10 @@ class InputDialog(QWidget):
         self.shp_gdf["LTEMA"] = np.where(mask, self.shp_gdf["PTEMA"], -1)
         self.shp_gdf["LTEMATEKST"] = np.where(mask, self.shp_gdf["TEMATEKST"], "")
 
+        ptema_mask = (self.shp_gdf["PTEMA"].astype(int).isin(self.LCODES)) & (~self.shp_gdf["PTEMA"].astype(int).isin(self.TERMINAL_CODES))
         # Now update the original columns where PTEMA is in LCODES
-        self.shp_gdf.loc[mask, "PTEMA"] = 324
-        self.shp_gdf.loc[mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
+        self.shp_gdf.loc[ptema_mask, "PTEMA"] = 324
+        self.shp_gdf.loc[ptema_mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
 
 
         # Pythag to get maximum 3D error
@@ -954,9 +965,10 @@ class InputDialog(QWidget):
         self.shp_gdf["LTEMA"] = np.where(mask, self.shp_gdf["PTEMA"], -1)
         self.shp_gdf["LTEMATEKST"] = np.where(mask, self.shp_gdf["TEMATEKST"], "")
 
+        ptema_mask = (self.shp_gdf["PTEMA"].astype(int).isin(self.LCODES)) & (~self.shp_gdf["PTEMA"].astype(int).isin(self.TERMINAL_CODES))
         # Now update the original columns where PTEMA is in LCODES
-        self.shp_gdf.loc[mask, "PTEMA"] = 324
-        self.shp_gdf.loc[mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
+        self.shp_gdf.loc[ptema_mask, "PTEMA"] = 324
+        self.shp_gdf.loc[ptema_mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
 
     def write_polylines(self):
         '''
