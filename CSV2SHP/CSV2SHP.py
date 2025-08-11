@@ -556,12 +556,12 @@ class InputDialog(QWidget):
             coords_2d = [(p[0], p[1]) for p in row.geometry.coords]
             xs, ys = zip(*coords_2d)
 
-            if row['LTEMA'] in self.LSP_CABLE:
+            if int(row['LTEMA']) in self.LSP_CABLE:
                 color = 'green' 
-            elif row['LTEMA'] in self.HSP_CABLE:
+            elif int(row['LTEMA']) in self.HSP_CABLE:
                 color = 'red'
 
-            linestyle = '--' if 'GOOD QUALITY' not in row['LTEMA_REASON'] else '-'
+            linestyle = '--' if 'GOOD QUALITY' not in row['TEMA_REASON'] else '-'
 
             self.ax.plot(xs, ys, color=color, linestyle=linestyle, linewidth=2)
 
@@ -605,9 +605,20 @@ class InputDialog(QWidget):
             if reply != QMessageBox.StandardButton.Yes:
                 return  # Cancel operation
 
-        self.points_schema = gpd.io.file.infer_schema(self.shp_gdf)
+        for col in self.shp_gdf.columns:
+            if col != self.shp_gdf.geometry.name:  # Skip the geometry column
+                self.shp_gdf[col] = self.shp_gdf[col].astype(str)
+        
+        self.point_schema = gpd.io.file.infer_schema(self.shp_gdf)
+
+        for field in ['PTEMA', 'LTEMA', 'MAKS_AVVIK']: # Set data type LONG in ARCMap
+            self.point_schema['properties'][field] = 'int32:10'
+
+        for field in ['MALEMETODE', 'SYNBARHET', 'H_MALEMETODE']: # Set data type SHORT in ARCMap
+            self.point_schema['properties'][field] = 'int32:4'
+
         # Proceed with writing the files
-        self.shp_gdf.to_file(shapefile_path, driver="ESRI Shapefile", schema=self.points_schema, engine="fiona")
+        self.shp_gdf.to_file(shapefile_path, driver="ESRI Shapefile", schema=self.point_schema, engine="fiona")
         self.shp_gdf.to_csv(csv_path, index=False)
         
         if self.auto_trase.currentIndex() == 0:
@@ -620,11 +631,17 @@ class InputDialog(QWidget):
         self.complete() # Send 'completed' message
 
     def save_polylines(self):
-        self.lines_schema = gpd.io.file.infer_schema(self.lines_gdf)
+        self.line_schema = gpd.io.file.infer_schema(self.lines_gdf)    
+        for field in ['LTEMA']: # Set data type LONG in ARCMap
+            self.line_schema['properties'][field] = 'int32:10'
+
+        for field in ['MALEMETODE', 'SYNBARHET']: # Set data type SHORT in ARCMap
+            self.line_schema['properties'][field] = 'int32:4'
+
         line_path = str(Path(self.outputFile.text()).with_suffix('')) + '_TRASE'
         line_path = Path(line_path).with_suffix('.shp')
         csv_path = Path(line_path).with_suffix('.csv')
-        self.lines_gdf.to_file(line_path, driver="ESRI Shapefile", schema=self.lines_schema, engine="fiona")
+        self.lines_gdf.to_file(line_path, driver="ESRI Shapefile", schema=self.line_schema, engine="fiona")
         self.lines_gdf.to_csv(csv_path, index=False)
                 
     def convert_kof(self):
@@ -733,16 +750,7 @@ class InputDialog(QWidget):
                                         self.shp_gdf['NOYAKTIGHE'].astype(int)**2
                                         )
                                         )
-                                        )
-
-        self.points_schema = gpd.io.file.infer_schema(self.shp_gdf)
-
-        for field in ['PTEMA', 'LTEMA', 'MAKS_AVVIK']: # Set data type LONG in ARCMap
-            self.points_schema['properties'][field] = 'int32:10'
-
-        for field in ['MALEMETODE', 'SYNBARHET', 'H_MALEMETODE']: # Set data type SHORT in ARCMap
-            self.points_schema['properties'][field] = 'int32:4'  
-      
+                                        )      
 
     def convert_csv(self):
         '''
@@ -949,14 +957,6 @@ class InputDialog(QWidget):
         # Now update the original columns where PTEMA is in LCODES
         self.shp_gdf.loc[mask, "PTEMA"] = 324
         self.shp_gdf.loc[mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
-
-        self.points_schema = gpd.io.file.infer_schema(self.shp_gdf)
-
-        for field in ['PTEMA', 'LTEMA', 'MAKS_AVVIK']: # Set data type LONG in ARCMap
-            self.points_schema['properties'][field] = 'int32:10'
-
-        for field in ['MALEMETODE', 'SYNBARHET', 'H_MALEMETODE']: # Set data type SHORT in ARCMap
-            self.points_schema['properties'][field] = 'int32:4'
 
     def write_polylines(self):
         '''
@@ -1262,28 +1262,18 @@ class InputDialog(QWidget):
 
             merged_geoms.append(line)
             merged_attrs.append({
-                'LTEMA': ltema,
-                'TEMATEKST': tematekst,
+                'LTEMA': str(ltema),
+                'TEMATEKST': str(tematekst),
                 'NOYAKTIGHE': str(max_noy),
-                'MALEMETODE': int(malemetode),
-                'SYNBARHET': int(synbarhet),
-                'DATO': dato,
+                'MALEMETODE': str(malemetode),
+                'SYNBARHET': str(synbarhet),
+                'DATO': str(dato),
                 'OBJTYPE': 'EL_Trase',
-                'LTEMA_REASON': reason_str
+                'TEMA_REASON': str(reason_str)
             })
 
         # Replace old GeoDataFrame creation
         self.lines_gdf = gpd.GeoDataFrame(merged_attrs, geometry=merged_geoms, crs=self.shp_gdf.crs)
-
-        self.lines_schema = gpd.io.file.infer_schema(self.lines_gdf)
-
-        for field in ['LTEMA']: # Set data type LONG in ARCMap
-            self.lines_schema['properties'][field] = 'int32:10'
-
-        for field in ['MALEMETODE', 'SYNBARHET']: # Set data type SHORT in ARCMap
-            self.lines_schema['properties'][field] = 'int32:4'
-
-
 
 if __name__=="__main__":
     import sys
