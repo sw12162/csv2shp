@@ -1033,20 +1033,23 @@ class InputDialog(QWidget):
         terminal_indices = self.shp_gdf[self.shp_gdf['LTEMA'].isin(self.TERMINALS)].index
         terminal_coords = coords[terminal_indices]
 
-        db = DBSCAN(eps=TERMINAL_DIST, min_samples=1).fit(terminal_coords)
-        terminal_cluster_labels = db.labels_
+        try:
+            db = DBSCAN(eps=TERMINAL_DIST, min_samples=1).fit(terminal_coords)
+            terminal_cluster_labels = db.labels_
 
-        # Map: cluster_id -> list of global point indices in that cluster
-        terminal_clusters = defaultdict(list)
-        for idx, cluster_id in zip(terminal_indices, terminal_cluster_labels):
-            terminal_clusters[cluster_id].append(idx)
+            # Map: cluster_id -> list of global point indices in that cluster
+            terminal_clusters = defaultdict(list)
+            for idx, cluster_id in zip(terminal_indices, terminal_cluster_labels):
+                terminal_clusters[cluster_id].append(idx)
 
-        # For each cluster, retain only one point as the valid "connection target"
-        valid_terminal_points = set()
-        for cluster in terminal_clusters.values():
-            # Pick representative (e.g., point with lowest index or most central)
-            representative = min(cluster, key=lambda idx: np.mean(np.linalg.norm(coords[cluster] - coords[idx], axis=1)))
-            valid_terminal_points.add(representative)
+            # For each cluster, retain only one point as the valid "connection target"
+            valid_terminal_points = set()
+            for cluster in terminal_clusters.values():
+                # Pick representative (e.g., point with lowest index or most central)
+                representative = min(cluster, key=lambda idx: np.mean(np.linalg.norm(coords[cluster] - coords[idx], axis=1)))
+                valid_terminal_points.add(representative)
+        except:
+            valid_terminal_points = set()
 
         # Using sqrt reduces computing times and scales nicely when points are not abundant
         nbrs = NearestNeighbors(n_neighbors=int(np.sqrt(len(self.shp_gdf))) ,metric='euclidean').fit(coords) 
