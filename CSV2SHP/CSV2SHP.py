@@ -621,11 +621,14 @@ class InputDialog(QWidget):
         
         self.point_schema = gpd.io.file.infer_schema(self.shp_gdf)
 
-        for field in ['PTEMA', 'LTEMA', 'MAKS_AVVIK']: # Set data type LONG in ARCMap
+        for field in ['PTEMA', 'LTEMA', 'MAKS_AVVIK', 'NOYAKTIGHE', 'H_NOYAKTIGHE']: # Set data type LONG in ARCMap
             self.point_schema['properties'][field] = 'int32:10'
 
         for field in ['MALEMETODE', 'SYNBARHET', 'H_MALEMETODE']: # Set data type SHORT in ARCMap
             self.point_schema['properties'][field] = 'int32:4'
+
+        for field in ['KOORDH']: # Set data type DOUBLE in ARCMap
+            self.point_schema['properties'][field] = 'int64:38'
 
         # Proceed with writing the files
         self.shp_gdf.to_file(shapefile_path, driver="ESRI Shapefile", schema=self.point_schema, engine="fiona")
@@ -642,10 +645,10 @@ class InputDialog(QWidget):
 
     def save_polylines(self):
         self.line_schema = gpd.io.file.infer_schema(self.lines_gdf)    
-        for field in ['LTEMA']: # Set data type LONG in ARCMap
+        for field in ['LTEMA', 'NOYAKTIGHE', 'H_NOYAKTIGHE']: # Set data type LONG in ARCMap
             self.line_schema['properties'][field] = 'int32:10'
 
-        for field in ['MALEMETODE', 'SYNBARHET']: # Set data type SHORT in ARCMap
+        for field in ['MALEMETODE', 'SYNBARHET', 'H_MALEMETODE']: # Set data type SHORT in ARCMap
             self.line_schema['properties'][field] = 'int32:4'
 
         line_path = str(Path(self.outputFile.text()).with_suffix('')) + '_TRASE'
@@ -750,7 +753,8 @@ class InputDialog(QWidget):
 
         ptema_mask = (self.shp_gdf["PTEMA"].astype(int).isin(self.LCODES)) & (~self.shp_gdf["PTEMA"].astype(int).isin(self.TERMINAL_CODES))
         # Now update the original columns where PTEMA is in LCODES
-        self.shp_gdf.loc[ptema_mask, "PTEMA"] = 324
+        self.shp_gdf["PTEMA"] = self.shp_gdf["PTEMA"].astype(str)
+        self.shp_gdf.loc[ptema_mask, "PTEMA"] = "324"
         self.shp_gdf.loc[ptema_mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
 
 
@@ -967,7 +971,8 @@ class InputDialog(QWidget):
 
         ptema_mask = (self.shp_gdf["PTEMA"].astype(int).isin(self.LCODES)) & (~self.shp_gdf["PTEMA"].astype(int).isin(self.TERMINAL_CODES))
         # Now update the original columns where PTEMA is in LCODES
-        self.shp_gdf.loc[ptema_mask, "PTEMA"] = 324
+        self.shp_gdf["PTEMA"] = self.shp_gdf["PTEMA"].astype(str)
+        self.shp_gdf.loc[ptema_mask, "PTEMA"] = "324"
         self.shp_gdf.loc[ptema_mask, "TEMATEKST"] = "Trasepunkt landmålte punkt"
 
     def write_polylines(self):
@@ -1277,7 +1282,9 @@ class InputDialog(QWidget):
                 'LTEMA': str(ltema),
                 'TEMATEKST': str(tematekst),
                 'NOYAKTIGHE': str(max_noy),
+                'H_NOYAKTIGHE': str(max_noy),
                 'MALEMETODE': str(malemetode),
+                'H_MALEMETODE': str(malemetode),
                 'SYNBARHET': str(synbarhet),
                 'DATO': str(dato),
                 'OBJTYPE': 'EL_Trase',
